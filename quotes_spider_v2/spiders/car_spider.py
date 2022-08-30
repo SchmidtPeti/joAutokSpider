@@ -11,6 +11,33 @@ class CarSpiderSpider(scrapy.Spider):
 
     def start_requests(self):
         filters_script = """
+                function scroll_to(splash, x, y)
+        local js = string.format(
+            "window.scrollTo(%s, %s);", 
+            tonumber(x), 
+            tonumber(y)
+        )
+        return splash:runjs(js)
+        end
+
+
+        function get_doc_height(splash)
+        return splash:runjs([[
+            Math.max(
+                Math.max(document.body.scrollHeight, document.documentElement.scrollHeight),
+                Math.max(document.body.offsetHeight, document.documentElement.offsetHeight),
+                Math.max(document.body.clientHeight, document.documentElement.clientHeight)
+            )
+        ]])
+        end
+
+
+        function scroll_to_bottom(splash)
+        local y = get_doc_height(splash)
+        return scroll_to(splash, 0, y)
+        end
+        
+
         function main(splash)
                 assert(splash:go(splash.args.url))
                 splash:wait(1.5)
@@ -31,17 +58,10 @@ class CarSpiderSpider(scrapy.Spider):
                 local element = splash:select('a[data-param-value="alfa-romeo"]')
                 element.mouse_click()
                 splash:wait(1.5)
-    local num_scrolls = 10
-    local scroll_delay = 1.0
-
-    local scroll_to = splash:jsfunc("window.scrollTo")
-    local get_body_height = splash:jsfunc(
-        "function() {return document.body.scrollHeight;}"
-    )
-    for _ = 1, num_scrolls do
-        scroll_to(0, get_body_height())
-        splash:wait(scroll_delay)
-    end        
+        for i=1,10 do
+            scroll_to_bottom(splash)    
+            assert(splash:wait(0.2))
+        end       
     return splash:html()
     end
         """
